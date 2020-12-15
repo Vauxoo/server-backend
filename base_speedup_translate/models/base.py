@@ -146,66 +146,30 @@ class Base(models.AbstractModel):
                     continue
                 new_field_name = "%s_%s" % (field_name, lang.lower())
                 new_method_name = "_compute_%s" % new_field_name
-                new_field = fields.Char(
-                    compute=get_compute(field_name, new_field_name, lang),
-                    store=True, index=True, prefetch=False)
+                new_field = fields.Char(compute=get_compute(field_name, new_field_name, lang), store=True, index=True)
                 add(new_field_name, new_field)
 
-    # @api.model
-    # def _inherits_join_calc(self, alias, fname, query, implicit=True, outer=False):
-    #     old_alias = super()._inherits_join_calc(alias, fname, query, implicit=implicit, outer=outer)
-    #     model = 'product.template'
-    #     lang = 'es_MX'
-    #     old_field = 'name'
-    #     new_field = "%s_%s" % (old_field, lang.lower())
-    #     if self._name == model and self.env.context.get('lang') == lang:
-    #         import pdb;pdb.set_trace()
-    #         if old_alias == '"%s"."%s"' % (alias, new_field):
-    #             new_alias = '"%s"."%s" as "%s"' % (alias, new_field, old_field)
-    #             return new_alias
-    #     return old_alias
     # TODO: patch read metho
     # TODO: patch _order_by method
     # TODO: patch _search
     @api.model
     def _search(self, args, offset=0, limit=None, order=None, count=False, access_rights_uid=None):
-        # env['product.template'].with_context(lang='es_MX').search([('name', 'ilike', 'alojamien')]).mapped('name')
+        # env['product.template'].with_context(lang='es_MX').search([('name', 'ilike', 'alojamien')])
         lang = 'es_MX'
         field = 'name'
-        model = 'product.template'
         # TODO: Check if the field is defined
-        # TODO: Change "product_template"."name_es_mx" as "name_es_mx" ->
-        #               "product_template"."name_es_mx" as "name" ->
-        if self._name == model and self.env.context.get('lang') == lang:
+        if self._name == 'product.template' and self.env.context.get('lang') == lang:
             new_field = "%s_%s" % (field, lang.lower())
             new_args = []
-            # TODO: Support "product_id.name" domains
             for arg in args:
                 if isinstance(arg, tuple) and len(arg) == 3 and arg[0] == field:
-                    new_args.append((new_field,) + arg[1:])
+                    new_args.append((arg[0].replace(field, new_field),) + arg[1:])
                 else:
                     new_args.append(arg)
         else:
             new_args = args
         return super()._search(new_args, offset=offset, limit=limit, order=order, count=count, access_rights_uid=access_rights_uid)
 
-    @api.multi
-    def _read_from_database(self, field_names, inherited_field_names=[]):
-        model = 'product.template'
-        lang = 'es_MX'
-        old_field = 'name'
-        new_field = "%s_%s" % (old_field, lang.lower())
-        if self._name == model and self.env.context.get('lang') == lang:
-            new_field_names = []
-            for field_name in field_names:
-                if field_name == old_field:
-                    field_name = new_field
-                    self._fields[new_field].name = old_field
-                    # TODO: Revert original value at final
-                new_field_names.append(field_name)
-        else:
-            new_field_names = field_names
-        return super()._read_from_database(new_field_names, inherited_field_names=inherited_field_names)
 
     @api.model
     def _generate_order_by(self, order_spec, query):
