@@ -182,6 +182,7 @@ class Base(models.AbstractModel):
     @api.model
     def _search(self, args, offset=0, limit=None, order=None, count=False, access_rights_uid=None):
         # env['product.template'].with_context(lang='es_MX', prefetch_fields=False).search([('name', 'ilike', 'alojamien')])
+        # env['product.template'].with_context(lang='es_MX', prefetch_fields=False).search([('name', 'ilike', 'Hotel'), ('categ_id', '=', 1), ('description_sale', 'ilike', 'Hotel')])
         # TODO: Check if the field is defined
         # TODO: Change "product_template"."name_es_mx" as "name_es_mx" ->
         #               "product_template"."name_es_mx" as "name" ->
@@ -192,16 +193,12 @@ class Base(models.AbstractModel):
             for arg in args:
                 if not isinstance(arg, tuple) or len(arg) != 3:
                     new_args.append(arg)
-                old_field = arg[0]
-                changed = False
+                    continue
                 for field, new_field in self._translate_fields[lang].items():
-                    # new_args.append((arg[0].replace(field, new_field),) + arg[1:])
-                    if field == old_field:
+                    if field == arg[0]:
                         new_args.append((new_field,) + arg[1:])
-                        # TODO: for-else?
-                        changed = True
                         break
-                if not changed:
+                else:
                     new_args.append(arg)
         else:
             new_args = args
