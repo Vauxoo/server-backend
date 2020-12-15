@@ -108,7 +108,6 @@ class Base(models.AbstractModel):
         cls = type(self)
         # self._add_magic_translated_fields()
         field_name = 'name'
-        new_field_name = 'borrar'
         lang = 'es_MX'
         if self._name != 'product.template':
             return
@@ -151,6 +150,16 @@ class Base(models.AbstractModel):
                     store=True, index=True, prefetch=False)
                 add(new_field_name, new_field)
 
+    @api.model
+    def _generate_translated_field(self, table_alias, field, query):
+        lang = 'es_MX'
+        old_field = 'name'
+        model = 'product.template'
+        new_field = "%s_%s" % (field, lang.lower())
+        if self._name == model and self.env.lang == lang and field == old_field:
+            return '"%s"."%s"' % (table_alias, new_field)
+        return super()._generate_translated_field(table_alias, field, query)
+
     # @api.model
     # def _inherits_join_calc(self, alias, fname, query, implicit=True, outer=False):
     #     old_alias = super()._inherits_join_calc(alias, fname, query, implicit=implicit, outer=outer)
@@ -169,7 +178,7 @@ class Base(models.AbstractModel):
     # TODO: patch _search
     @api.model
     def _search(self, args, offset=0, limit=None, order=None, count=False, access_rights_uid=None):
-        # env['product.template'].with_context(lang='es_MX').search([('name', 'ilike', 'alojamien')]).mapped('name')
+        # env['product.template'].with_context(lang='es_MX', prefetch_fields=False).search([('name', 'ilike', 'alojamien')]).mapped('name')
         lang = 'es_MX'
         field = 'name'
         model = 'product.template'
@@ -200,7 +209,7 @@ class Base(models.AbstractModel):
             for field_name in field_names:
                 if field_name == old_field:
                     field_name = new_field
-                    self._fields[new_field].name = old_field
+                    # self._fields[new_field].name = old_field
                     # TODO: Revert original value at final
                 new_field_names.append(field_name)
         else:
@@ -225,8 +234,6 @@ class Base(models.AbstractModel):
             res.append(order_part)
         order_spec = ','.join(res)
         return super()._generate_order_by(order_spec, query)
-
-
 
     @api.model
     def _setup_base(self):
