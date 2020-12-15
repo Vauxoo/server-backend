@@ -121,9 +121,7 @@ class Base(models.AbstractModel):
 
         cls = type(self)
         # self._add_magic_translated_fields()
-        field_name = 'name'
-        lang = 'es_MX'
-        if self._name != 'product.template':
+        if self._name not in translate_models:
             return
         def get_compute(field_name, new_field_name, lang):
             @api.depends(field_name)
