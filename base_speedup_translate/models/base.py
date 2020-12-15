@@ -108,7 +108,6 @@ class Base(models.AbstractModel):
         cls = type(self)
         # self._add_magic_translated_fields()
         field_name = 'name'
-        new_field_name = 'borrar'
         lang = 'es_MX'
         if self._name != 'product.template':
             return
@@ -157,7 +156,7 @@ class Base(models.AbstractModel):
     # TODO: patch _search
     @api.model
     def _search(self, args, offset=0, limit=None, order=None, count=False, access_rights_uid=None):
-        # env['product.template'].with_context(lang='es_MX').search([('name', 'ilike', 'alojamien')])
+        # env['product.template'].with_context(lang='es_MX', prefetch_fields=False).search([('name', 'ilike', 'alojamien')])
         lang = 'es_MX'
         field = 'name'
         model = 'product.template'
@@ -177,6 +176,16 @@ class Base(models.AbstractModel):
         else:
             new_args = args
         return super()._search(new_args, offset=offset, limit=limit, order=order, count=count, access_rights_uid=access_rights_uid)
+
+    @api.model
+    def _generate_translated_field(self, table_alias, field, query):
+        lang = 'es_MX'
+        old_field = 'name'
+        model = 'product.template'
+        new_field = "%s_%s" % (field, lang.lower())
+        if self._name == model and self.env.lang == lang and field == old_field:
+            return '"%s"."%s"' % (table_alias, new_field)
+        return super()._generate_translated_field(table_alias, field, query)
 
 
     @api.model
