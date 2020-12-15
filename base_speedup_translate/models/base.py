@@ -170,7 +170,17 @@ class Base(models.AbstractModel):
                     store=True, index=True, prefetch=False)
                 # new_field = fields.Char(compute=get_compute(field_name, new_field_name, lang), store=True, index=True)
                 add(new_field_name, new_field)
-                # setattr(cls, '_translate_fields', (field_name))
+                # TODO: Check self._inherits of all models
+                for model in self._inherits_children:
+                    inherit_cls = type(self.env[model])
+                    if inherit_cls._translate_fields is None:
+                        inherit_cls._translate_fields = {}
+                    if lang not in inherit_cls._translate_fields:
+                        # TODO: collections defaultdict?
+                        inherit_cls._translate_fields[lang] = {}
+                    if field_name in inherit_cls._translate_fields[lang]:
+                        continue
+                    inherit_cls._translate_fields[lang][field_name] = cls._translate_fields[lang][field_name]
 
     @api.model
     def _search(self, args, offset=0, limit=None, order=None, count=False, access_rights_uid=None):
@@ -182,7 +192,9 @@ class Base(models.AbstractModel):
         # TODO: Support "product_id.name" domains
         # TODO: Support product.product search name
         lang = self.env.context.get('lang')
-        if self._name in translate_models and lang in self._translate_fields and args:
+        models = list(set(list(self._inherits.keys()) + [self._name]) & set(translate_models))
+        # TODO: Support related fields
+        if models and lang in self._translate_fields and args:
             new_args = []
             for arg in args:
                 if not isinstance(arg, tuple) or len(arg) != 3:
@@ -205,7 +217,6 @@ class Base(models.AbstractModel):
             new_field = self._translate_fields[lang][field]
             return '"%s"."%s"' % (table_alias, new_field)
         return super()._generate_translated_field(table_alias, field, query)
-
 
     @api.model
     def _generate_order_by(self, order_spec, query):
