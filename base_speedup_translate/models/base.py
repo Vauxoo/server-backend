@@ -187,6 +187,7 @@ class Base(models.AbstractModel):
         # TODO: Change "product_template"."name_es_mx" as "name_es_mx" ->
         #               "product_template"."name_es_mx" as "name" ->
         # TODO: Support "product_id.name" domains
+        # TODO: Support product.product search name
         lang = self.env.context.get('lang')
         if self._name in translate_models and lang in self._translate_fields and args:
             new_args = []
@@ -206,11 +207,9 @@ class Base(models.AbstractModel):
 
     @api.model
     def _generate_translated_field(self, table_alias, field, query):
-        lang = 'es_MX'
-        old_field = 'name'
-        model = 'product.template'
-        new_field = "%s_%s" % (field, lang.lower())
-        if self._name == model and self.env.lang == lang and field == old_field:
+        lang = self.env.context.get('lang')
+        if self._name in translate_models and self._translate_fields and field in (self._translate_fields.get(lang) or {}):
+            new_field = self._translate_fields[lang][field]
             return '"%s"."%s"' % (table_alias, new_field)
         return super()._generate_translated_field(table_alias, field, query)
 
@@ -218,19 +217,19 @@ class Base(models.AbstractModel):
     @api.model
     def _generate_order_by(self, order_spec, query):
         res = []
-        lang = 'es_MX'
-        field = 'name'
-        new_field = '%s_%s' % (field, lang.lower())
-        # import pdb;pdb.set_trace()
+        lang = self.env.context.get('lang')
         # TODO: Check bypass patch of order
+        # TODO: Fix is adding the same field 3 times
         order_spec = order_spec or self._order
-        for order_part in order_spec and order_spec.split(',') or []:
-            order_split = order_part.strip().split(' ')
-            order_field = order_split[0].strip()
-            if order_field == field:
-                if self.env.context.get('lang') == lang:
-                    order_part = order_part.replace('name', new_field)
-            res.append(order_part)
+        for order_part in (order_spec and order_spec.split(',') or []):
+            for field, new_field in (self._translate_fields and self._translate_fields.get(lang) or {}).items():
+                order_split = order_part.strip().split(' ')
+                order_field = order_split[0].strip()
+                if order_field == field:
+                    res.append(order_part.replace(field, new_field))
+                    break
+            else:
+                res.append(order_part)
         order_spec = ','.join(res)
         return super()._generate_order_by(order_spec, query)
 
