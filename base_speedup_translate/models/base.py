@@ -142,7 +142,6 @@ class Base(models.AbstractModel):
                     continue
                 # try:
                 #     field_type_class = field_type[field.type]
-                #     # TODO: Support html fields?
                 # except KeyError:
                 #     continue
                 # if field_name != 'name':
