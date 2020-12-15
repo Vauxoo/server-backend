@@ -146,7 +146,10 @@ class Base(models.AbstractModel):
                     continue
                 new_field_name = "%s_%s" % (field_name, lang.lower())
                 new_method_name = "_compute_%s" % new_field_name
-                new_field = fields.Char(compute=get_compute(field_name, new_field_name, lang), store=True, index=True)
+                new_field = fields.Char(
+                    compute=get_compute(field_name, new_field_name, lang),
+                    store=True, index=True, prefetch=False)
+                # new_field = fields.Char(compute=get_compute(field_name, new_field_name, lang), store=True, index=True)
                 add(new_field_name, new_field)
 
     # TODO: patch read metho
@@ -157,13 +160,18 @@ class Base(models.AbstractModel):
         # env['product.template'].with_context(lang='es_MX').search([('name', 'ilike', 'alojamien')])
         lang = 'es_MX'
         field = 'name'
+        model = 'product.template'
         # TODO: Check if the field is defined
-        if self._name == 'product.template' and self.env.context.get('lang') == lang:
+        # TODO: Change "product_template"."name_es_mx" as "name_es_mx" ->
+        #               "product_template"."name_es_mx" as "name" ->
+        # TODO: Support "product_id.name" domains
+        if self._name == model and self.env.context.get('lang') == lang:
             new_field = "%s_%s" % (field, lang.lower())
             new_args = []
             for arg in args:
                 if isinstance(arg, tuple) and len(arg) == 3 and arg[0] == field:
-                    new_args.append((arg[0].replace(field, new_field),) + arg[1:])
+                    # new_args.append((arg[0].replace(field, new_field),) + arg[1:])
+                    new_args.append((new_field,) + arg[1:])
                 else:
                     new_args.append(arg)
         else:
