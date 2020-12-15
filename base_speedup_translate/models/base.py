@@ -8,8 +8,22 @@ from odoo import api, fields, models, tools, exceptions
 _logger = logging.getLogger(__name__)
 
 
+def config_strip(key):
+    return list(set(map(lambda a: a.strip(' "\''), (tools.config.get(key) or '').split(','))))
+
+
+# models = ['product.template']
+# langs = ['es_MX']
+translate_models = config_strip('translate_models')
+translate_models_langs = config_strip('translate_models_langs')
+
+# TODO: Get dynamically all translate=True fields
+model_fields = ['name', 'description_sale', 'description', 'description_purchase']
+
+
 class Base(models.AbstractModel):
     _inherit = 'base'
+    _translate_fields = None
 
     # @api.model
     # def _add_magic_translated_fields(self):
@@ -123,8 +137,6 @@ class Base(models.AbstractModel):
             """ add ``field`` with the given ``name`` if it does not exist yet """
             if name not in self._fields:
                 self._add_field(name, field)
-        def config_strip(key):
-            return list(set(map(lambda a: a.strip(' "\''), (tools.config.get(key) or '').split(','))))
         field_type = {'char': fields.Char, 'text': fields.Text}
         translate_models = config_strip('translate_models')
         if self._name not in translate_models:
@@ -141,15 +153,28 @@ class Base(models.AbstractModel):
                     field_type_class = field_type[field.type]
                 except IndexError:
                     continue
-                if field_name != 'name':
-                    continue
+                # if field_name != 'name':
+                    # continue
                 new_field_name = "%s_%s" % (field_name, lang.lower())
+                if cls._translate_fields is None:
+                    cls._translate_fields = {}
+                if lang not in cls._translate_fields:
+                    # TODO: collections defaultdict?
+                    cls._translate_fields[lang] = {}
+                if field_name in cls._translate_fields[lang]:
+                    continue
+                cls._translate_fields[lang][field_name] = new_field_name
+                # # key = (field_name, new_field_name)
+                # if key in cls._translate_fields:
+                    # continue
+                # cls._translate_fields.append(key)
                 new_method_name = "_compute_%s" % new_field_name
                 new_field = fields.Char(
                     compute=get_compute(field_name, new_field_name, lang),
                     store=True, index=True, prefetch=False)
                 # new_field = fields.Char(compute=get_compute(field_name, new_field_name, lang), store=True, index=True)
                 add(new_field_name, new_field)
+                # setattr(cls, '_translate_fields', (field_name))
 
     # TODO: patch read metho
     # TODO: patch _order_by method
@@ -157,21 +182,26 @@ class Base(models.AbstractModel):
     @api.model
     def _search(self, args, offset=0, limit=None, order=None, count=False, access_rights_uid=None):
         # env['product.template'].with_context(lang='es_MX', prefetch_fields=False).search([('name', 'ilike', 'alojamien')])
-        lang = 'es_MX'
-        field = 'name'
-        model = 'product.template'
         # TODO: Check if the field is defined
         # TODO: Change "product_template"."name_es_mx" as "name_es_mx" ->
         #               "product_template"."name_es_mx" as "name" ->
         # TODO: Support "product_id.name" domains
-        if self._name == model and self.env.context.get('lang') == lang:
-            new_field = "%s_%s" % (field, lang.lower())
+        lang = self.env.context.get('lang')
+        if self._name in translate_models and lang in self._translate_fields and args:
             new_args = []
             for arg in args:
-                if isinstance(arg, tuple) and len(arg) == 3 and arg[0] == field:
+                if not isinstance(arg, tuple) or len(arg) != 3:
+                    new_args.append(arg)
+                old_field = arg[0]
+                changed = False
+                for field, new_field in self._translate_fields[lang].items():
                     # new_args.append((arg[0].replace(field, new_field),) + arg[1:])
-                    new_args.append((new_field,) + arg[1:])
-                else:
+                    if field == old_field:
+                        new_args.append((new_field,) + arg[1:])
+                        # TODO: for-else?
+                        changed = True
+                        break
+                if not changed:
                     new_args.append(arg)
         else:
             new_args = args
