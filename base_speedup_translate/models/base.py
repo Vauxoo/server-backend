@@ -198,6 +198,24 @@ class Base(models.AbstractModel):
         order_spec = ','.join(res)
         return super()._generate_order_by(order_spec, query)
 
+    # este es el causo que fallara con recursion
+    # @api.multi
+    # def _read_from_database(self, field_names, inherited_field_names=[]):
+    #     model = 'product.template'
+    #     lang = 'es_MX'
+    #     old_field = 'name'
+    #     new_field = "%s_%s" % (old_field, lang.lower())
+    #     if self._name == model and self.env.context.get('lang') == lang:
+    #         new_field_names = []
+    #         for field_name in field_names:
+    #             if field_name == old_field:
+    #                 field_name = new_field
+    #                 # self._fields[new_field].name = old_field
+    #                 # TODO: Revert original value at final
+    #             new_field_names.append(field_name)
+    #     else:
+    #         new_field_names = field_names
+    #     return super()._read_from_database(new_field_names, inherited_field_names=inherited_field_names)
 
 
     @api.model
