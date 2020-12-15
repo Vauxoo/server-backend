@@ -129,7 +129,6 @@ class Base(models.AbstractModel):
             """ add ``field`` with the given ``name`` if it does not exist yet """
             if name not in self._fields:
                 self._add_field(name, field)
-        field_type = {'char': fields.Char, 'text': fields.Text}
         translate_models = config_strip('translate_models')
         if self._name not in translate_models:
             return
@@ -141,11 +140,11 @@ class Base(models.AbstractModel):
             for field_name, field in list(self._fields.items()):
                 if not field.translate:
                     continue
-                try:
-                    field_type_class = field_type[field.type]
-                    # TODO: Support html fields?
-                except KeyError:
-                    continue
+                # try:
+                #     field_type_class = field_type[field.type]
+                #     # TODO: Support html fields?
+                # except KeyError:
+                #     continue
                 # if field_name != 'name':
                     # continue
                 new_field_name = "%s_%s" % (field_name, lang.lower())
@@ -162,7 +161,7 @@ class Base(models.AbstractModel):
                     # continue
                 # cls._translate_fields.append(key)
                 new_method_name = "_compute_%s" % new_field_name
-                new_field = fields.Char(
+                new_field = field.new(
                     compute=get_compute(field_name, new_field_name, lang),
                     store=True, index=True, prefetch=False)
                 # new_field = fields.Char(compute=get_compute(field_name, new_field_name, lang), store=True, index=True)
