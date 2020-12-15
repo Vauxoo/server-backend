@@ -181,6 +181,7 @@ class Base(models.AbstractModel):
     def _search(self, args, offset=0, limit=None, order=None, count=False, access_rights_uid=None):
         # env['product.template'].with_context(lang='es_MX', prefetch_fields=False).search([('name', 'ilike', 'alojamien')])
         # env['product.template'].with_context(lang='es_MX', prefetch_fields=False).search([('name', 'ilike', 'Hotel'), ('categ_id', '=', 1), ('description_sale', 'ilike', 'Hotel')])
+        # [self.env.cr.execute("ALTER TABLE product_template DROP COLUMN IF EXISTS %s" % (column,)) for column in [i for i in self.env['product.template']._fields.keys() if i.endswith('es_mx') or i.endswith('en_us')]]
         # TODO: Check if the field is defined
         # TODO: Change "product_template"."name_es_mx" as "name_es_mx" ->
         #               "product_template"."name_es_mx" as "name" ->
