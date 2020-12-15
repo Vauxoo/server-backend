@@ -119,6 +119,7 @@ class Base(models.AbstractModel):
         def get_compute(field_name, new_field_name, lang):
             @api.depends(field_name)
             def compute(self):
+                # TODO: What about memory error?
                 recs_lang = dict((r['id'], r['name']) for r in self.with_context(lang=lang, i18n_origin=True).read(['id', 'name']))
                 for rec in self:
                     rec[new_field_name] = recs_lang[rec.id]
