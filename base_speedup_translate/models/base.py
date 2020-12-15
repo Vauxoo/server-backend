@@ -119,7 +119,7 @@ class Base(models.AbstractModel):
         def get_compute(field_name, new_field_name, lang):
             @api.depends(field_name)
             def compute(self):
-                recs_lang = dict((r['id'], r['name']) for r in self.with_context(lang=lang).read(['id', 'name']))
+                recs_lang = dict((r['id'], r['name']) for r in self.with_context(lang=lang, i18n_origin=True).read(['id', 'name']))
                 for rec in self:
                     rec[new_field_name] = recs_lang[rec.id]
             return compute
@@ -153,8 +153,8 @@ class Base(models.AbstractModel):
                 if lang not in cls._translate_fields:
                     # TODO: collections defaultdict?
                     cls._translate_fields[lang] = {}
-                if field_name in cls._translate_fields[lang]:
-                    continue
+                # if field_name in cls._translate_fields[lang]:
+                    # continue
                 cls._translate_fields[lang][field_name] = new_field_name
                 # # key = (field_name, new_field_name)
                 # if key in cls._translate_fields:
@@ -190,7 +190,7 @@ class Base(models.AbstractModel):
         lang = self.env.context.get('lang')
         models = list(set(list(self._inherits.keys()) + [self._name]) & set(translate_models))
         # TODO: Support related fields
-        if models and lang in self._translate_fields and args:
+        if models and lang in self._translate_fields and args and not self.env.context.get('i18n_origin'):
             new_args = []
             for arg in args:
                 if not isinstance(arg, tuple) or len(arg) != 3:
@@ -209,7 +209,7 @@ class Base(models.AbstractModel):
     @api.model
     def _generate_translated_field(self, table_alias, field, query):
         lang = self.env.context.get('lang')
-        if self._name in translate_models and self._translate_fields and field in (self._translate_fields.get(lang) or {}):
+        if self._name in translate_models and self._translate_fields and field in (self._translate_fields.get(lang) or {}) and not self.env.context.get('i18n_origin'):
             new_field = self._translate_fields[lang][field]
             return '"%s"."%s"' % (table_alias, new_field)
         return super()._generate_translated_field(table_alias, field, query)
@@ -220,17 +220,18 @@ class Base(models.AbstractModel):
         lang = self.env.context.get('lang')
         # TODO: Check bypass patch of order
         # TODO: Fix is adding the same field 3 times
-        order_spec = order_spec or self._order
-        for order_part in (order_spec and order_spec.split(',') or []):
-            for field, new_field in (self._translate_fields and self._translate_fields.get(lang) or {}).items():
-                order_split = order_part.strip().split(' ')
-                order_field = order_split[0].strip()
-                if order_field == field:
-                    res.append(order_part.replace(field, new_field))
-                    break
-            else:
-                res.append(order_part)
-        order_spec = ','.join(res)
+        if not self.env.context.get('i18n_origin'):
+            order_spec = order_spec or self._order
+            for order_part in (order_spec and order_spec.split(',') or []):
+                for field, new_field in (self._translate_fields and self._translate_fields.get(lang) or {}).items():
+                    order_split = order_part.strip().split(' ')
+                    order_field = order_split[0].strip()
+                    if order_field == field:
+                        res.append(order_part.replace(field, new_field))
+                        break
+                else:
+                    res.append(order_part)
+            order_spec = ','.join(res)
         return super()._generate_order_by(order_spec, query)
 
     @api.model
