@@ -121,8 +121,6 @@ class Base(models.AbstractModel):
 
         cls = type(self)
         # self._add_magic_translated_fields()
-        if self._name not in translate_models:
-            return
         def get_compute(field_name, new_field_name, lang):
             @api.depends(field_name)
             def compute(self):
@@ -174,9 +172,6 @@ class Base(models.AbstractModel):
                 add(new_field_name, new_field)
                 # setattr(cls, '_translate_fields', (field_name))
 
-    # TODO: patch read metho
-    # TODO: patch _order_by method
-    # TODO: patch _search
     @api.model
     def _search(self, args, offset=0, limit=None, order=None, count=False, access_rights_uid=None):
         # env['product.template'].with_context(lang='es_MX', prefetch_fields=False).search([('name', 'ilike', 'alojamien')])
