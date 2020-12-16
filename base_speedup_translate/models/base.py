@@ -11,9 +11,14 @@ _logger = logging.getLogger(__name__)
 def config_strip(key):
     return list(set(map(lambda a: a.strip(' "\''), (tools.config.get(key) or '').split(','))))
 
-
+# TODO: Add in the doc that is required -u
+# TODO: Load in a hook
 translate_models = config_strip('translate_models')
 translate_models_langs = config_strip('translate_models_langs')
+translate_models_fields = {}
+for translate_model in translate_models:
+    key_fields = 'translate_fields_%s' % translate_model.replace('.', '_')
+    translate_models_fields[translate_model] = config_strip(key_fields)
 
 
 class Base(models.AbstractModel):
@@ -137,7 +142,9 @@ class Base(models.AbstractModel):
         for lang in self.env['res.lang'].search(domain).mapped('code'):
             # TODO: Check if not exists the field
             # TODO: Check if the field is indexed?
-            for field_name, field in list(self._fields.items()):
+            for field_name in set(translate_models_fields.get(self._name)) & set(self._fields):
+                field = self._fields[field_name]
+            # for field_name, field in list(self._fields.items()):
                 if not field.translate:
                     continue
                 # try:
@@ -162,7 +169,7 @@ class Base(models.AbstractModel):
                 new_method_name = "_compute_%s" % new_field_name
                 new_field = field.new(
                     compute=get_compute(field_name, new_field_name, lang),
-                    store=True, index=True, prefetch=False)
+                    store=True, index=field.index, prefetch=False)
                 # new_field = fields.Char(compute=get_compute(field_name, new_field_name, lang), store=True, index=True)
                 add(new_field_name, new_field)
                 # TODO: Check self._inherits of all models
@@ -190,7 +197,7 @@ class Base(models.AbstractModel):
         lang = self.env.context.get('lang')
         models = list(set(list(self._inherits.keys()) + [self._name]) & set(translate_models))
         # TODO: Support related fields
-        if models and lang in self._translate_fields and args and not self.env.context.get('i18n_origin'):
+        if models and self._translate_fields and lang in self._translate_fields and args and not self.env.context.get('i18n_origin'):
             new_args = []
             for arg in args:
                 if not isinstance(arg, tuple) or len(arg) != 3:
