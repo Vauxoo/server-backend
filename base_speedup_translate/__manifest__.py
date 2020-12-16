@@ -6,7 +6,7 @@
     "version": "12.0.1.0.0",
     "development_status": "Production/Stable",
     "category": "Technical Settings",
-    "website": "https://github.com/OCA/server-backend,
+    "website": "https://github.com/OCA/server-backend",
     "author": "Vauxoo, Odoo Community Association (OCA)",
     "maintainers": ["moylop260", "luisg123v"],
     "license": "LGPL-3",
