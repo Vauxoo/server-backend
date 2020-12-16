@@ -1,12 +1,12 @@
 This module improves retrieving products when a language is installed and configured.
-The default behaviour is to order products by name, which in this case would be slow
+The default behaviour is to get translated the columns of products, website, partners and so on.
+which in this case would be slow
 because Odoo will process the product's name to translate it.
 
-Warning: This changes the way products are ordered
-product are ordered "default_code, id"
-instead of "default_code, translated(name), id"
+Warning: This module adds new columns to original model for each lang enabled
+it could increase a lot the size of your database
 
-Because Odoo needs the following query to get a translated(name)
+Odoo to get translated(column) uses the following way:
 
 .. code-block::
 
@@ -40,14 +40,19 @@ Using a production database executing this query the result is:
 
 It is so slow.
 
-Using the new order: "default_code, id" the following query is executed now:
+Using this module a new field is created called {field}_{lang}
+for example for the lang es_MX the field product_template.name
+a new field is created in product_template.name_es_mx
+if original field has `index=True` so the new field will have too
+
+It transform the same query to
 
 .. code-block::
 
     SELECT "product_product".id
     FROM   "product_product"
     WHERE  ( "product_product"."active" = true )
-    ORDER  BY "product_product"."default_code"
+    ORDER  BY "product_product"."name_es_mx"
     LIMIT  10
 
 The new result is:
@@ -63,14 +68,7 @@ So, It will process the original value to translate it
 
 Then, It will order by a column computed on-the-fly of other tables
 
-default_code is a column indexed so the result is faster
-
 Opening the ``/shop`` page could consume 7.5s instead of 1.2s without this module
-
-Odoo is using the _order parameter even if you don't need it.
- - ``products.search(...).write(...)``
- - ``browse().*2many_product_ids.ids``
-
 
 More info about this on:
 
