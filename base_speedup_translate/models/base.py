@@ -9,7 +9,10 @@ _logger = logging.getLogger(__name__)
 
 
 def config_strip(key):
-    return list(set(map(lambda a: a.strip(' "\''), (tools.config.get(key) or '').split(','))))
+    value = tools.config.get(key)
+    if not value or value and not value.strip():
+        return []
+    return list(set(map(lambda a: a.strip(' "\''), tools.config[key].split(','))))
 
 # TODO: Add in the doc that is required -u
 # TODO: Load in a hook
@@ -138,13 +141,18 @@ class Base(models.AbstractModel):
         # import pdb;pdb.set_trace()
         if self._name not in translate_models or not self.env['res.lang']._fields:
             # self.env['res.lang']._fields <- Required for models not loaded
+            # TODO: Use directly cr.execute instead
             return
         translate_models_langs = config_strip('translate_models_langs')
         domain = [('code', 'in', translate_models_langs), ('active', '=', True)]
         for lang in self.env['res.lang'].search(domain).mapped('code'):
             # TODO: Check if not exists the field
             # TODO: Check if the field is indexed?
-            for field_name in set(translate_models_fields.get(self._name)) & set(self._fields):
+            field_names = translate_models_fields.get(self._name)
+            if not field_names:
+                # If the model is defined but the fields are not so use all them
+                field_names = [name for name, f in self._fields.items() if f.translate]
+            for field_name in set(field_names) & set(self._fields):
                 field = self._fields[field_name]
             # for field_name, field in list(self._fields.items()):
                 if not field.translate:
@@ -161,11 +169,11 @@ class Base(models.AbstractModel):
                 if lang not in cls._translate_fields:
                     # TODO: collections defaultdict?
                     cls._translate_fields[lang] = {}
-                # if field_name in cls._translate_fields[lang]:
-                    # continue
+                if field_name in cls._translate_fields[lang]:
+                    continue
                 cls._translate_fields[lang][field_name] = new_field_name
                 # # key = (field_name, new_field_name)
-                # if key in cls._translate_fields:
+                # if key in cls._translate_fields:
                     # continue
                 # cls._translate_fields.append(key)
                 new_method_name = "_compute_%s" % new_field_name
@@ -174,6 +182,7 @@ class Base(models.AbstractModel):
                     store=True, index=field.index, prefetch=False)
                 # new_field = fields.Char(compute=get_compute(field_name, new_field_name, lang), store=True, index=True)
                 add(new_field_name, new_field)
+                _logger.info("New translation field %s.%s", self._table, new_field_name)
                 # TODO: Check self._inherits of all models
                 for model in self._inherits_children:
                     inherit_cls = type(self.env[model])
