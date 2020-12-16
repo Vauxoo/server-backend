@@ -63,8 +63,9 @@ class Base(models.AbstractModel):
             # TODO: Use directly cr.execute instead
             return
         translate_models_langs = config_strip('translate_models_langs')
-        domain = [('code', 'in', translate_models_langs), ('active', '=', True)]
-        for lang in self.env['res.lang'].search(domain).mapped('code'):
+        # domain = [('code', 'in', translate_models_langs), ('active', '=', True)]
+        langs = set(dict(self.env['res.lang'].get_installed()).keys()) & set(translate_models_langs)
+        for lang in langs:
             # TODO: Check if not exists the field
             # TODO: Check if the field is indexed?
             field_names = translate_models_fields.get(self._name)
@@ -111,11 +112,10 @@ class Base(models.AbstractModel):
         #               "product_template"."name_es_mx" as "name" ->
         # TODO: Support "product_id.name" domains
         # TODO: Support product.product search name
-        lang = self.env.context.get('lang')
+        lang = self._get_lang()
         models = list(set(list(self._inherits.keys()) + [self._name]) & set(translate_models))
         # TODO: Support related fields
-        # TODO: Support es_ES using es_* installed
-        if models and self._translate_fields and lang in self._translate_fields and args and not self.env.context.get('i18n_origin'):
+        if lang and models and self._translate_fields and lang in self._translate_fields and args and not self.env.context.get('i18n_origin'):
             new_args = []
             for arg in args:
                 if not isinstance(arg, tuple) or len(arg) != 3:
@@ -132,9 +132,25 @@ class Base(models.AbstractModel):
         return super(Base, self)._search(new_args, offset=offset, limit=limit, order=order, count=count, access_rights_uid=access_rights_uid)
 
     @api.model
-    def _generate_translated_field(self, table_alias, field, query):
+    # TODO: ORM-Cache this one
+    def _get_lang(self):
         lang = self.env.context.get('lang')
-        if self._name in translate_models and self._translate_fields and field in (self._translate_fields.get(lang) or {}) and not self.env.context.get('i18n_origin'):
+        if not lang:
+            return
+        # {'es_MX': 'es', 'en_US': 'en'}
+        langs_installed = dict(
+            (lang_iso, lang_iso.split('_')[0]) for lang_iso, _lang_name in self.env['res.lang'].get_installed())
+        if lang in langs_installed:
+            return lang
+        # if original 'es_MX' lang is not installed then using any 'es_*' installed
+        for lang_installed, lang_main in langs_installed.items():
+            if lang.split('_')[0] == lang_main:
+                return lang_installed
+
+    @api.model
+    def _generate_translated_field(self, table_alias, field, query):
+        lang = self._get_lang()
+        if lang and self._name in translate_models and self._translate_fields and field in (self._translate_fields.get(lang) or {}) and not self.env.context.get('i18n_origin'):
             new_field = self._translate_fields[lang][field]
             return '"%s"."%s"' % (table_alias, new_field)
         return super(Base, self)._generate_translated_field(table_alias, field, query)
@@ -142,10 +158,10 @@ class Base(models.AbstractModel):
     @api.model
     def _generate_order_by(self, order_spec, query):
         res = []
-        lang = self.env.context.get('lang')
+        lang = self._get_lang()
         # TODO: Check bypass patch of order
         # TODO: Fix is adding the same field 3 times
-        if not self.env.context.get('i18n_origin'):
+        if not self.env.context.get('i18n_origin') and lang:
             order_spec = order_spec or self._order
             for order_part in (order_spec and order_spec.split(',') or []):
                 for field, new_field in (self._translate_fields and self._translate_fields.get(lang) or {}).items():
