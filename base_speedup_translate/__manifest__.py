@@ -1,14 +1,14 @@
 # Copyright 2020 Vauxoo, S.A. de C.V.
 # License LGPL-3.0 or later (https://www.gnu.org/licenses/lgpl).
 {
-    'name': 'Product Order No Name',
-    'summary': 'Speedup product retrieve',
-    "version": "12.0.2.0.0",
+    'name': 'Base Speedup Translate,
+    'summary': 'Speedup translation of fields',
+    "version": "12.0.1.0.0",
     "development_status": "Production/Stable",
     "category": "Technical Settings",
-    "website": "https://github.com/OCA/product-attribute",
+    "website": "https://github.com/OCA/server-backend,
     "author": "Vauxoo, Odoo Community Association (OCA)",
-    "maintainers": ["WR-96", "moylop260", "luisg123v"],
+    "maintainers": ["moylop260", "luisg123v"],
     "license": "LGPL-3",
     "depends": ["base"],
     "application": False,
