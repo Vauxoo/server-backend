@@ -135,7 +135,9 @@ class Base(models.AbstractModel):
             if name not in self._fields:
                 self._add_field(name, field)
         translate_models = config_strip('translate_models')
-        if self._name not in translate_models:
+        # import pdb;pdb.set_trace()
+        if self._name not in translate_models or not self.env['res.lang']._fields:
+            # self.env['res.lang']._fields <- Required for models not loaded
             return
         translate_models_langs = config_strip('translate_models_langs')
         domain = [('code', 'in', translate_models_langs), ('active', '=', True)]
@@ -197,6 +199,7 @@ class Base(models.AbstractModel):
         lang = self.env.context.get('lang')
         models = list(set(list(self._inherits.keys()) + [self._name]) & set(translate_models))
         # TODO: Support related fields
+        # TODO: Support es_ES using es_* installed
         if models and self._translate_fields and lang in self._translate_fields and args and not self.env.context.get('i18n_origin'):
             new_args = []
             for arg in args:
@@ -211,7 +214,7 @@ class Base(models.AbstractModel):
                     new_args.append(arg)
         else:
             new_args = args
-        return super()._search(new_args, offset=offset, limit=limit, order=order, count=count, access_rights_uid=access_rights_uid)
+        return super(Base, self)._search(new_args, offset=offset, limit=limit, order=order, count=count, access_rights_uid=access_rights_uid)
 
     @api.model
     def _generate_translated_field(self, table_alias, field, query):
@@ -219,7 +222,7 @@ class Base(models.AbstractModel):
         if self._name in translate_models and self._translate_fields and field in (self._translate_fields.get(lang) or {}) and not self.env.context.get('i18n_origin'):
             new_field = self._translate_fields[lang][field]
             return '"%s"."%s"' % (table_alias, new_field)
-        return super()._generate_translated_field(table_alias, field, query)
+        return super(Base, self)._generate_translated_field(table_alias, field, query)
 
     @api.model
     def _generate_order_by(self, order_spec, query):
@@ -239,7 +242,7 @@ class Base(models.AbstractModel):
                 else:
                     res.append(order_part)
             order_spec = ','.join(res)
-        return super()._generate_order_by(order_spec, query)
+        return super(Base, self)._generate_order_by(order_spec, query)
 
     @api.model
     def _setup_base(self):
