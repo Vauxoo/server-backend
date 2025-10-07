@@ -20,6 +20,7 @@
         "views/user.xml",
         "views/group.xml",
         "wizards/create_from_user.xml",
+        "wizards/role_add_users_wizard_views.xml",
         "wizards/wizard_groups_into_role.xml",
     ],
     "installable": True,
